@@ -22,6 +22,7 @@
 
 import base64
 import os.path
+from os import mkdir
 import re
 import sys
 import textwrap
@@ -87,9 +88,14 @@ for line in codecs.open('certdata.txt', 'rt', encoding='utf8'):
 if len(obj) > 0:
     objects.append(obj)
 
+# Create output dirs
+mkdir("common-ca")
+mkdir("blacklist")
+
 # Build up trust database.
 trust = dict()
 for obj in objects:
+    obj['DIRNAME'] = 'common-ca'
     if obj['CKA_CLASS'] not in ('CKO_NETSCAPE_TRUST', 'CKO_NSS_TRUST'):
         continue
     if obj['CKA_TRUST_SERVER_AUTH'] in ('CKT_NETSCAPE_TRUSTED_DELEGATOR',
@@ -103,6 +109,7 @@ for obj in objects:
         print('!'*74)
         print("UNTRUSTED CERTIFICATE FOUND: %s" % obj['CKA_LABEL'])
         print('!'*74)
+        obj['DIRNAME'] = 'blacklist'
     else:
         print("Ignoring certificate %s.  SAUTH=%s, EPROT=%s" % \
               (obj['CKA_LABEL'], obj['CKA_TRUST_SERVER_AUTH'],
@@ -112,7 +119,7 @@ for obj in objects:
     if obj['CKA_CLASS'] == 'CKO_CERTIFICATE':
         if not obj['CKA_LABEL'] in trust or not trust[obj['CKA_LABEL']]:
             continue
-        bname = obj['CKA_LABEL'][1:-1].replace('/', '_')\
+        bname = obj['DIRNAME'] + '/' + obj['CKA_LABEL'][1:-1].replace('/', '_')\
                                       .replace(' ', '_')\
                                       .replace('(', '=')\
                                       .replace(')', '=')\
