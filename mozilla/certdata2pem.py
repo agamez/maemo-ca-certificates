@@ -87,24 +87,12 @@ for line in codecs.open('certdata.txt', 'rt', encoding='utf8'):
 if len(obj) > 0:
     objects.append(obj)
 
-# Read blacklist.
-blacklist = []
-if os.path.exists('blacklist.txt'):
-    for line in open('blacklist.txt', 'r'):
-        line = line.strip()
-        if line.startswith('#') or len(line) == 0:
-            continue
-        item = line.split('#', 1)[0].strip()
-        blacklist.append(item)
-
 # Build up trust database.
 trust = dict()
 for obj in objects:
     if obj['CKA_CLASS'] not in ('CKO_NETSCAPE_TRUST', 'CKO_NSS_TRUST'):
         continue
-    if obj['CKA_LABEL'] in blacklist:
-        print("Certificate %s blacklisted, ignoring." % obj['CKA_LABEL'])
-    elif obj['CKA_TRUST_SERVER_AUTH'] in ('CKT_NETSCAPE_TRUSTED_DELEGATOR',
+    if obj['CKA_TRUST_SERVER_AUTH'] in ('CKT_NETSCAPE_TRUSTED_DELEGATOR',
                                           'CKT_NSS_TRUSTED_DELEGATOR'):
         trust[obj['CKA_LABEL']] = True
     elif obj['CKA_TRUST_EMAIL_PROTECTION'] in ('CKT_NETSCAPE_TRUSTED_DELEGATOR',
@@ -113,7 +101,7 @@ for obj in objects:
     elif obj['CKA_TRUST_SERVER_AUTH'] in ('CKT_NETSCAPE_UNTRUSTED',
                                           'CKT_NSS_NOT_TRUSTED'):
         print('!'*74)
-        print("UNTRUSTED BUT NOT BLACKLISTED CERTIFICATE FOUND: %s" % obj['CKA_LABEL'])
+        print("UNTRUSTED CERTIFICATE FOUND: %s" % obj['CKA_LABEL'])
         print('!'*74)
     else:
         print("Ignoring certificate %s.  SAUTH=%s, EPROT=%s" % \
