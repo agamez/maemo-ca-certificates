@@ -21,8 +21,8 @@
 # USA.
 
 import base64
+import os
 import os.path
-from os import mkdir
 import re
 import sys
 import textwrap
@@ -89,8 +89,11 @@ if len(obj) > 0:
     objects.append(obj)
 
 # Create output dirs
-mkdir("common-ca")
-mkdir("blacklist")
+try:
+	os.mkdir("common-ca")
+	os.mkdir("blacklist")
+except Exception:
+	pass
 
 # Build up trust database.
 trust = dict()
