@@ -25,7 +25,8 @@ import os.path
 import re
 import sys
 import textwrap
-import io
+import codecs
+from array import array
 
 objects = []
 
@@ -36,8 +37,9 @@ field, type, value, obj = None, None, None, dict()
 # Python 3 will not let us decode non-ascii characters if we
 # have not specified an encoding, but Python 2's open does not
 # have an option to set the encoding. Python 3's open is io.open
-# and io.open has been backported to Python 2.6 and 2.7, so use io.open.
-for line in io.open('certdata.txt', 'rt', encoding='utf8'):
+# and io.open has been backported to Python 2.6 and 2.7, but not
+# to Python 2.5, which offers the alternate codecs.open
+for line in codecs.open('certdata.txt', 'rt', encoding='utf8'):
     # Ignore the file header.
     if not in_data:
         if line.startswith('BEGINDATA'):
@@ -79,7 +81,7 @@ for line in io.open('certdata.txt', 'rt', encoding='utf8'):
         raise NotImplementedError('line_parts < 2 not supported.')
     if type == 'MULTILINE_OCTAL':
         in_multiline = True
-        value = bytearray()
+        value = array('B')
         continue
     obj[field] = value
 if len(obj) > 0:
@@ -131,28 +133,21 @@ for obj in objects:
         # this is the only way to decode the way NSS stores multi-byte UTF-8
         # and we need an escaped string for checking existence of things
         # otherwise we're dependant on the user's current locale.
-        if bytes != str:
-            # We're in python 3, convert the utf-8 string to a
-            # sequence of bytes that represents this utf-8 string
-            # then encode the byte-sequence as an escaped string that
-            # can be passed to open() and os.path.exists()
-            bname = bname.encode('utf-8').decode('unicode_escape').encode('latin-1')
-        else:
-            # Python 2
-            # Convert the unicode string back to its original byte form
-            # (contents of files returned by io.open are returned as
-            #  unicode strings)
-            # then to an escaped string that can be passed to open()
-            # and os.path.exists()
-            bname = bname.encode('utf-8').decode('string_escape')
 
-        fname = bname + b'.crt'
+        # Python 2
+        # Convert the unicode string back to its original byte form
+        # (contents of files returned by io.open are returned as
+        #  unicode strings)
+        # then to an escaped string that can be passed to open()
+        # and os.path.exists()
+        bname = bname.encode('utf-8').decode('string_escape')
+
+        fname = bname + r'.crt'
         if os.path.exists(fname):
             print("Found duplicate certificate name %s, renaming." % bname)
-            fname = bname + b'_2.crt'
+            fname = bname + r'_2.crt'
         f = open(fname, 'w')
         f.write("-----BEGIN CERTIFICATE-----\n")
-        encoded = base64.b64encode(obj['CKA_VALUE']).decode('utf-8')
-        f.write("\n".join(textwrap.wrap(encoded, 64)))
-        f.write("\n-----END CERTIFICATE-----\n")
+        f.write(base64.encodestring(obj['CKA_VALUE']))
+        f.write("-----END CERTIFICATE-----\n")
 
